@@ -1,5 +1,7 @@
 import os
 import sys
+from dotenv import load_dotenv
+
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -21,6 +23,7 @@ app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(note_bp, url_prefix='/api')
 # configure database to use repository-root `database/app.db`
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+load_dotenv(os.path.join(ROOT_DIR, '.env'))
 DB_PATH = os.path.join(ROOT_DIR, 'database', 'app.db')
 # ensure database directory exists
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)

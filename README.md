@@ -96,6 +96,21 @@ notetaking-app/
 - `PUT /api/notes/<id>` - Update a note
 - `DELETE /api/notes/<id>` - Delete a note
 - `GET /api/notes/search?q=<query>` - Search notes
+- `POST /api/notes/<id>/translate` - Translate a note without saving the translation
+
+### Translation Setup
+
+Copy `.env.example` to `.env` and set `OPENROUTER_API_KEY` to a fresh OpenRouter key. The server reads this value from the environment; it is never sent to the browser. The editable provider instruction is stored in `prompt/translation.txt`.
+
+Supported target languages are Chinese, Japanese, Spanish, French, German, and Korean. Submit a request such as:
+
+```json
+{
+   "target_language": "Japanese"
+}
+```
+
+The response contains `translation` and `target_language`. Translation results are temporary and are not stored in the database. The request is limited to 10,000 characters.
 
 ### Request/Response Format
 ```json

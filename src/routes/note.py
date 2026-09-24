@@ -1,7 +1,14 @@
 from flask import Blueprint, jsonify, request
 from src.models.note import Note, db
+from src.services.translation import (
+    SUPPORTED_LANGUAGES,
+    TranslationConfigurationError,
+    TranslationProviderError,
+    translate_text,
+)
 
 note_bp = Blueprint('note', __name__)
+MAX_TRANSLATION_LENGTH = 10000
 
 @note_bp.route('/notes', methods=['GET'])
 def get_notes():
@@ -73,4 +80,30 @@ def search_notes():
     ).order_by(Note.updated_at.desc()).all()
     
     return jsonify([note.to_dict() for note in notes])
+
+
+@note_bp.route('/notes/<int:note_id>/translate', methods=['POST'])
+def translate_note(note_id):
+    """Translate a note without persisting the translated text."""
+    note = Note.query.get_or_404(note_id)
+    data = request.get_json(silent=True) or {}
+    target_language = data.get('target_language')
+
+    if target_language not in SUPPORTED_LANGUAGES:
+        return jsonify({'error': 'Unsupported target language'}), 400
+    if not note.content or not note.content.strip():
+        return jsonify({'error': 'Note content cannot be empty'}), 400
+    if len(note.content) > MAX_TRANSLATION_LENGTH:
+        return jsonify({'error': 'Note content is too long to translate'}), 413
+
+    try:
+        translation = translate_text(note.content, target_language)
+        return jsonify({
+            'translation': translation,
+            'target_language': target_language,
+        })
+    except TranslationConfigurationError:
+        return jsonify({'error': 'Translation is not configured on the server'}), 503
+    except TranslationProviderError:
+        return jsonify({'error': 'Translation service is temporarily unavailable'}), 502
 

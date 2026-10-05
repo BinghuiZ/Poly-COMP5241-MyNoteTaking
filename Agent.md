@@ -145,3 +145,19 @@ Ask for confirmation if:
 - Preserve existing naming conventions.
 - Do not add seed data, test data, triggers, policies, or indexes unless requested or required.
 - After a change, report the exact SQL or migration file changed.
+
+## Web UI design rules
+
+- Inspect the current UI before editing.
+- Do not redesign the page unless explicitly requested.
+- Preserve the current layout, components, routes, content, and behavior.
+- Make only the smallest changes needed to fix the identified issue.
+- Do not change unrelated CSS, HTML, JavaScript, TypeScript, or configuration.
+- Do not replace the UI framework or styling system.
+- Do not add a dependency unless explicitly requested.
+- Do not change colors, fonts, spacing, breakpoints, or component structure unless the request requires it.
+- Do not apply broad formatting or CSS cleanup.
+- Do not fix unrelated accessibility or design issues.
+- Before editing, list the exact files and UI issues to be changed.
+- After editing, inspect the diff and verify the affected viewport.
+- Ask for confirmation before changing more files than originally identified.

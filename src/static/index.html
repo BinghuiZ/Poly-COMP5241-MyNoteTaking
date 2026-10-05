@@ -289,6 +289,38 @@
             color: #721c24;
         }
 
+        .translation-details {
+            margin-top: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .translation-details summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .translation-details-content {
+            padding: 0 15px 15px;
+        }
+
+        .translation-details pre {
+            margin: 0;
+            padding: 12px;
+            overflow-x: auto;
+            border-radius: 8px;
+            background: #fff;
+            color: #333;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -421,6 +453,16 @@
                         <div class="form-label" id="translationResultLabel">Translation</div>
                         <div id="translationResultText"></div>
                     </div>
+
+                    <details class="translation-details" id="translationDetails" style="display: none;">
+                        <summary>Translation request and response</summary>
+                        <div class="translation-details-content">
+                            <div class="form-label">Request</div>
+                            <pre id="translationRequestDetails"></pre>
+                            <div class="form-label">Response</div>
+                            <pre id="translationResponseDetails"></pre>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="empty-state" id="emptyState">
@@ -563,17 +605,36 @@
                 const languageSelect = document.getElementById('translationLanguage');
                 const translateButton = document.getElementById('translateBtn');
                 const targetLanguage = languageSelect.value;
+                const requestBody = { target_language: targetLanguage };
+                const requestUrl = `/api/notes/${this.currentNote.id}/translate`;
+                const requestHeaders = { 'Content-Type': 'application/json' };
                 translateButton.disabled = true;
                 languageSelect.disabled = true;
+                this.clearTranslationDetails();
                 this.showTranslationMessage('Translating...', 'loading');
 
                 try {
-                    const response = await fetch(`/api/notes/${this.currentNote.id}/translate`, {
+                    const response = await fetch(requestUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ target_language: targetLanguage })
+                        headers: requestHeaders,
+                        body: JSON.stringify(requestBody)
                     });
                     const data = await response.json();
+                    document.getElementById('translationRequestDetails').textContent =
+                        JSON.stringify({
+                            method: 'POST',
+                            url: new URL(requestUrl, window.location.origin).href,
+                            headers: requestHeaders,
+                            body: requestBody
+                        }, null, 2);
+                    document.getElementById('translationResponseDetails').textContent =
+                        JSON.stringify({
+                            status: response.status,
+                            statusText: response.statusText,
+                            headers: Object.fromEntries(response.headers.entries()),
+                            body: data
+                        }, null, 2);
+                    document.getElementById('translationDetails').style.display = 'block';
                     if (!response.ok) throw new Error(data.error || 'Translation failed');
 
                     const result = document.getElementById('translationResult');
@@ -597,12 +658,22 @@
                 result.style.display = 'block';
             }
 
+            clearTranslationDetails() {
+                const details = document.getElementById('translationDetails');
+                if (!details) return;
+                details.style.display = 'none';
+                details.open = false;
+                document.getElementById('translationRequestDetails').textContent = '';
+                document.getElementById('translationResponseDetails').textContent = '';
+            }
+
             clearTranslation() {
                 const result = document.getElementById('translationResult');
                 if (!result) return;
                 result.style.display = 'none';
                 result.className = 'translation-result';
                 document.getElementById('translationResultText').textContent = '';
+                this.clearTranslationDetails();
             }
 
             async saveNote(isAutoSave = false) {
@@ -752,4 +823,3 @@
     </script>
 </body>
 </html>
-

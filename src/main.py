@@ -31,15 +31,18 @@ CORS(app)
 # register blueprints
 app.register_blueprint(user_bp, url_prefix='/api')
 app.register_blueprint(note_bp, url_prefix='/api')
-DB_PATH = os.path.join(ROOT_DIR, 'database', 'app_auth.db')
-# ensure database directory exists
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 database_url = os.environ.get('DATABASE_URL')
 if database_url and 'ep-example.neon.tech' in database_url:
     print('Ignoring placeholder DATABASE_URL; using local SQLite database.')
     database_url = None
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or f"sqlite:///{DB_PATH}"
+if database_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Vercel's deployed source directory is read-only; /tmp is writable but ephemeral.
+    db_directory = '/tmp' if os.environ.get('VERCEL') else os.path.join(ROOT_DIR, 'database')
+    os.makedirs(db_directory, exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(db_directory, 'app_auth.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():

@@ -187,6 +187,7 @@ The application is configured for easy deployment with:
 
 ### Database Configuration
 - Neon is selected when `DATABASE_URL` is set. Without it, the app uses a clean local SQLite fallback at `database/app_auth.db`.
+- On Vercel, configure `DATABASE_URL` in the Vercel project settings. If it is omitted, the fallback uses `/tmp/app_auth.db`, which is writable but ephemeral and may not persist between function instances.
 - Tables are created from the SQLAlchemy models on first run.
 - The `users` table owns many `notes` rows through `notes.user_id`; deleting a user cascades to their notes.
 - SQLAlchemy ORM for database operations

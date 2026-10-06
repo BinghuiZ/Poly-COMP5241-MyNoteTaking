@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from src.main import app
 from src.models.note import Note, db
@@ -70,6 +71,12 @@ class AuthAndOwnershipTests(unittest.TestCase):
     def test_notes_require_authentication(self):
         response = self.client.get('/api/notes')
         self.assertEqual(response.status_code, 401)
+
+    def test_frontend_exposes_client_side_logout(self):
+        index_html = Path(__file__).parents[1].joinpath('src', 'static', 'index.html').read_text()
+        self.assertIn('id="logoutBtn"', index_html)
+        self.assertIn("localStorage.removeItem('access_token')", index_html)
+        self.assertIn('this.resetAuthState()', index_html)
 
 
 if __name__ == '__main__':

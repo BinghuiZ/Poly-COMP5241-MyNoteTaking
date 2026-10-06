@@ -106,6 +106,7 @@ All note endpoints require `Authorization: Bearer <access_token>`.
 - `GET /api/users/me` - Get the authenticated user's profile
 
 Registration and login return a short-lived JWT access token. Passwords are stored as secure hashes; the token itself is not stored in the database.
+The web interface provides a **Sign out** button that clears the locally stored access token and returns to the sign-in view. Because JWTs are stateless in this application, signing out does not revoke an already-issued token on the server; tokens still expire after the configured one-hour lifetime.
 
 ### Translation Setup
 

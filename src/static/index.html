@@ -526,6 +526,20 @@
             opacity: 1;
         }
 
+        .logout-btn {
+            margin-top: 12px;
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: var(--surface-strong);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: var(--accent-soft);
+        }
+
         .main-content {
             grid-template-columns: minmax(240px, 0.78fr) minmax(0, 2fr);
             gap: var(--space);
@@ -831,6 +845,7 @@
         <div class="header">
             <h1>📝 NoteTaker</h1>
             <p>Organize your thoughts, capture your ideas</p>
+            <button type="button" class="logout-btn" id="logoutBtn">Sign out</button>
         </div>
 
         <div class="auth-panel" id="authPanel">
@@ -926,9 +941,10 @@
                 this.bindEvents();
                 if (this.token) {
                     document.getElementById('authPanel').style.display = 'none';
+                    document.getElementById('logoutBtn').style.display = '';
                     await this.loadNotes();
                 } else {
-                    document.querySelector('.main-content').style.display = 'none';
+                    this.resetAuthState();
                 }
             }
 
@@ -938,6 +954,7 @@
                     this.authenticate();
                 });
                 document.getElementById('authToggle').addEventListener('click', () => this.toggleAuth());
+                document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
                 document.getElementById('newNoteBtn').addEventListener('click', () => this.createNewNote());
                 document.getElementById('saveBtn').addEventListener('click', () => this.saveNote());
                 document.getElementById('deleteBtn').addEventListener('click', () => this.deleteNote());
@@ -990,20 +1007,36 @@
                     localStorage.setItem('access_token', this.token);
                     document.getElementById('authPanel').style.display = 'none';
                     document.querySelector('.main-content').style.display = '';
+                    document.getElementById('logoutBtn').style.display = '';
                     await this.loadNotes();
                 } catch (error) {
                     document.getElementById('authMessage').textContent = error.message;
                 }
             }
 
+            resetAuthState() {
+                localStorage.removeItem('access_token');
+                this.token = null;
+                this.notes = [];
+                this.currentNote = null;
+                document.getElementById('authPanel').style.display = '';
+                document.querySelector('.main-content').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('authMessage').textContent = '';
+                document.getElementById('authForm').reset();
+                this.hideEditor();
+                this.renderNotesList();
+            }
+
+            logout() {
+                this.resetAuthState();
+            }
+
             async authFetch(url, options = {}) {
                 options.headers = { ...(options.headers || {}), Authorization: `Bearer ${this.token}` };
                 const response = await fetch(url, options);
                 if (response.status === 401) {
-                    localStorage.removeItem('access_token');
-                    this.token = null;
-                    document.getElementById('authPanel').style.display = '';
-                    document.querySelector('.main-content').style.display = 'none';
+                    this.resetAuthState();
                 }
                 return response;
             }

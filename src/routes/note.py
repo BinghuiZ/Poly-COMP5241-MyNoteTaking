@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from src.models.note import Note, db
 from src.services.translation import (
     SUPPORTED_LANGUAGES,
@@ -10,13 +11,21 @@ from src.services.translation import (
 note_bp = Blueprint('note', __name__)
 MAX_TRANSLATION_LENGTH = 10000
 
+def owned_note(note_id):
+    return Note.query.filter_by(
+        id=note_id,
+        user_id=int(get_jwt_identity()),
+    ).first_or_404()
+
 @note_bp.route('/notes', methods=['GET'])
+@jwt_required()
 def get_notes():
     """Get all notes, ordered by most recently updated"""
-    notes = Note.query.order_by(Note.updated_at.desc()).all()
+    notes = Note.query.filter_by(user_id=int(get_jwt_identity())).order_by(Note.updated_at.desc()).all()
     return jsonify([note.to_dict() for note in notes])
 
 @note_bp.route('/notes', methods=['POST'])
+@jwt_required()
 def create_note():
     """Create a new note"""
     try:
@@ -24,7 +33,11 @@ def create_note():
         if not data or 'title' not in data or 'content' not in data:
             return jsonify({'error': 'Title and content are required'}), 400
         
-        note = Note(title=data['title'], content=data['content'])
+        note = Note(
+            user_id=int(get_jwt_identity()),
+            title=data['title'],
+            content=data['content'],
+        )
         db.session.add(note)
         db.session.commit()
         return jsonify(note.to_dict()), 201
@@ -33,16 +46,18 @@ def create_note():
         return jsonify({'error': str(e)}), 500
 
 @note_bp.route('/notes/<int:note_id>', methods=['GET'])
+@jwt_required()
 def get_note(note_id):
     """Get a specific note by ID"""
-    note = Note.query.get_or_404(note_id)
+    note = owned_note(note_id)
     return jsonify(note.to_dict())
 
 @note_bp.route('/notes/<int:note_id>', methods=['PUT'])
+@jwt_required()
 def update_note(note_id):
     """Update a specific note"""
     try:
-        note = Note.query.get_or_404(note_id)
+        note = owned_note(note_id)
         data = request.json
         
         if not data:
@@ -57,10 +72,11 @@ def update_note(note_id):
         return jsonify({'error': str(e)}), 500
 
 @note_bp.route('/notes/<int:note_id>', methods=['DELETE'])
+@jwt_required()
 def delete_note(note_id):
     """Delete a specific note"""
     try:
-        note = Note.query.get_or_404(note_id)
+        note = owned_note(note_id)
         db.session.delete(note)
         db.session.commit()
         return '', 204
@@ -69,6 +85,7 @@ def delete_note(note_id):
         return jsonify({'error': str(e)}), 500
 
 @note_bp.route('/notes/search', methods=['GET'])
+@jwt_required()
 def search_notes():
     """Search notes by title or content"""
     query = request.args.get('q', '')
@@ -76,6 +93,7 @@ def search_notes():
         return jsonify([])
     
     notes = Note.query.filter(
+        Note.user_id == int(get_jwt_identity()),
         (Note.title.contains(query)) | (Note.content.contains(query))
     ).order_by(Note.updated_at.desc()).all()
     
@@ -83,9 +101,10 @@ def search_notes():
 
 
 @note_bp.route('/notes/<int:note_id>/translate', methods=['POST'])
+@jwt_required()
 def translate_note(note_id):
     """Translate a note without persisting the translated text."""
-    note = Note.query.get_or_404(note_id)
+    note = owned_note(note_id)
     data = request.get_json(silent=True) or {}
     target_language = data.get('target_language')
 
@@ -106,4 +125,3 @@ def translate_note(note_id):
         return jsonify({'error': 'Translation is not configured on the server'}), 503
     except TranslationProviderError:
         return jsonify({'error': 'Translation service is temporarily unavailable'}), 502
-

@@ -4,13 +4,28 @@ from unittest.mock import Mock, patch
 
 from src.main import app
 from src.models.note import Note, db
+from src.models.user import User
 from src.services.translation import translate_text
+from flask_jwt_extended import create_access_token
 
 
 class TranslationTests(unittest.TestCase):
     def setUp(self):
         with app.app_context():
-            self.note = Note(title='Translation test', content='Hello world')
+            existing_user = User.query.filter_by(email='translation@example.com').first()
+            if existing_user:
+                db.session.delete(existing_user)
+                db.session.commit()
+            self.user = User(
+                username='translation-user',
+                email='translation@example.com',
+                password_hash='test-hash',
+            )
+            db.session.add(self.user)
+            db.session.flush()
+            self.user_id = self.user.id
+            self.token = create_access_token(identity=str(self.user_id))
+            self.note = Note(user_id=self.user_id, title='Translation test', content='Hello world')
             db.session.add(self.note)
             db.session.commit()
             self.note_id = self.note.id
@@ -20,6 +35,9 @@ class TranslationTests(unittest.TestCase):
             note = db.session.get(Note, self.note_id)
             if note:
                 db.session.delete(note)
+                user = db.session.get(User, self.user_id)
+                if user:
+                    db.session.delete(user)
                 db.session.commit()
 
     def test_service_loads_editable_prompt(self):
@@ -42,6 +60,7 @@ class TranslationTests(unittest.TestCase):
             response = app.test_client().post(
                 f'/api/notes/{self.note_id}/translate',
                 json={'target_language': 'Chinese'},
+                headers={'Authorization': f'Bearer {self.token}'},
             )
 
         self.assertEqual(response.status_code, 200)
@@ -55,6 +74,7 @@ class TranslationTests(unittest.TestCase):
         response = app.test_client().post(
             f'/api/notes/{self.note_id}/translate',
             json={'target_language': 'Klingon'},
+            headers={'Authorization': f'Bearer {self.token}'},
         )
 
         self.assertEqual(response.status_code, 400)
@@ -69,6 +89,7 @@ class TranslationTests(unittest.TestCase):
         response = app.test_client().post(
             f'/api/notes/{self.note_id}/translate',
             json={'target_language': 'Japanese'},
+            headers={'Authorization': f'Bearer {self.token}'},
         )
 
         self.assertEqual(response.status_code, 400)

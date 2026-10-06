@@ -30,7 +30,7 @@ The application is deployed and accessible at: **https://3dhkilc88dkk.manus.spac
 - **Flask-CORS**: Cross-origin resource sharing support
 
 ### Database
-- **SQLite**: Lightweight, file-based database for data persistence
+- **Neon PostgreSQL**: Managed PostgreSQL database for account and note persistence
 
 ## 📁 Project Structure
 
@@ -47,7 +47,7 @@ notetaking-app/
 │   │   ├── index.html       # Frontend application
 │   │   └── favicon.ico      # Application icon
 │   ├── database/
-│   │   └── app.db           # SQLite database file
+│   │   └── app_auth.db      # Clean local SQLite fallback for development/tests
 │   └── main.py              # Flask application entry point
 ├── venv/                    # Python virtual environment
 ├── requirements.txt         # Python dependencies
@@ -90,13 +90,22 @@ notetaking-app/
 ## 📡 API Endpoints
 
 ### Notes API
-- `GET /api/notes` - Get all notes
-- `POST /api/notes` - Create a new note
-- `GET /api/notes/<id>` - Get a specific note
-- `PUT /api/notes/<id>` - Update a note
-- `DELETE /api/notes/<id>` - Delete a note
-- `GET /api/notes/search?q=<query>` - Search notes
-- `POST /api/notes/<id>/translate` - Translate a note without saving the translation
+- `GET /api/notes` - Get the authenticated user's notes
+- `POST /api/notes` - Create a note for the authenticated user
+- `GET /api/notes/<id>` - Get one of the authenticated user's notes
+- `PUT /api/notes/<id>` - Update one of the authenticated user's notes
+- `DELETE /api/notes/<id>` - Delete one of the authenticated user's notes
+- `GET /api/notes/search?q=<query>` - Search the authenticated user's notes
+- `POST /api/notes/<id>/translate` - Translate an owned note without saving the translation
+
+All note endpoints require `Authorization: Bearer <access_token>`.
+
+### Authentication API
+- `POST /api/auth/register` - Create an account with `username`, `email`, and `password`
+- `POST /api/auth/login` - Login with `email` and `password`
+- `GET /api/users/me` - Get the authenticated user's profile
+
+Registration and login return a short-lived JWT access token. Passwords are stored as secure hashes; the token itself is not stored in the database.
 
 ### Translation Setup
 
@@ -170,11 +179,15 @@ The application is configured for easy deployment with:
 
 ### Environment Variables
 - `FLASK_ENV`: Set to `development` for debug mode
-- `SECRET_KEY`: Flask secret key for sessions
+- `SECRET_KEY`: Flask secret key
+- `JWT_SECRET_KEY`: Secret used to sign access tokens
+- `DATABASE_URL`: Neon PostgreSQL pooled connection string for application traffic
+- `DATABASE_URL_UNPOOLED`: Direct Neon connection string for migrations or administrative tasks
 
 ### Database Configuration
-- Database file: `src/database/app.db`
-- Automatic table creation on first run
+- Neon is selected when `DATABASE_URL` is set. Without it, the app uses a clean local SQLite fallback at `database/app_auth.db`.
+- Tables are created from the SQLAlchemy models on first run.
+- The `users` table owns many `notes` rows through `notes.user_id`; deleting a user cascades to their notes.
 - SQLAlchemy ORM for database operations
 
 ## 📱 Browser Compatibility
@@ -219,5 +232,4 @@ Potential improvements for future versions:
 
 ---
 
-**Built with ❤️ using Flask, SQLite, and modern web technologies**
-
+**Built with ❤️ using Flask, Neon PostgreSQL, and modern web technologies**
